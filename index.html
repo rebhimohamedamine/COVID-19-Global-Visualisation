@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+
+<head>
+    <title>COVID-19 Visualizer</title>
+    <!-- Meta -->
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <!-- CSS / Favicon -->
+    <link href="styles.css" rel="stylesheet" />
+    <link href="styles/compare.css" rel="stylesheet" />
+
+    <!-- Core JavaScript Libraries -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <script src="https://d3js.org/topojson.v3.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>
+
+    <!-- Core Application Files -->
+    <script src="dataService.js" defer></script>
+    <script src="dataServiceExtension.js" defer></script>
+
+    <!-- Globe Modules -->
+    <script src="globe/MiniGlobe.js" defer></script>
+    <script src="globe/GlobeVis.js" defer></script>
+    <script src="globe/GlobeEvents.js" defer></script>
+    <script src="globe/GlobeRendering.js" defer></script>
+    <script src="globe/GlobeCountries.js" defer></script>
+    <script src="globe/GlobeAnimation.js" defer></script>
+    <script src="globe/main.js" defer></script>
+
+    <!-- Modular Components -->
+    <script src="uiUtils.js" defer></script>
+    <script src="search.js" defer></script>
+    <script src="visualizations.js" defer></script>
+    <script src="chartFactory.js" defer></script>
+
+    <!-- Chart Controls -->
+    <script src="chartControls.js" defer></script>
+
+    <!-- Chart Implementations -->
+    <script src="charts/barChart.js" defer></script>
+    <script src="charts/lineChart.js" defer></script>
+    <script src="charts/pieChart.js" defer></script>
+    <script src="charts/radarChart.js" defer></script>
+    <script src="charts/compareCharts.js" defer></script>
+
+    <!-- Compare Mode -->
+    <script src="compare.js" defer></script>
+    <script src="compareUI.js" defer></script>
+</head>
+
+<body>
+    <!-- Main containers -->
+    <div id="particles"></div>
+    <div id="globe" class="centered-globe"></div>
+
+    <!-- Header -->
+    <div id="header">
+        <div id="search">
+            <img src="assets/icons/search.svg" onclick="openSearch()">
+        </div>
+
+        <!-- Dataset buttons -->
+        <div class="dataset-buttons">
+            <button id="epidemBtn" class="dataset-btn active" onclick="changeDataset('epidem')" title="Epidemiology">
+                <img src="assets/icons/virus.svg" class="dataset-icon" alt="Epidemiology">
+            </button>
+            <button id="hospBtn" class="dataset-btn" onclick="changeDataset('hospitalizations')" title="Hospitalizations">
+                <img src="assets/icons/hospital.svg" class="dataset-icon" alt="Hospitalizations">
+            </button>
+            <button id="vaccBtn" class="dataset-btn" onclick="changeDataset('vaccinations')" title="Vaccinations">
+                <img src="assets/icons/syringe.svg" class="dataset-icon" alt="Vaccinations">
+            </button>
+        </div>
+
+        <h1>COVID-19</h1>
+    </div>
+
+    <!-- Search Modal Overlay -->
+    <div id="searchModal" class="search-modal">
+        <div class="search-container">
+            <div class="search-header">
+                <h3>Search Countries</h3>
+                <button class="close-search" onclick="closeSearch()">×</button>
+            </div>
+            <input type="text" id="countrySearchInput" placeholder="Type country name..." autocomplete="off">
+            <div id="countryList" class="country-list"></div>
+        </div>
+    </div>
+
+    <!-- Country Info Panel -->
+    <div id="countryInfo">
+        <h3 id="countryName">Select a country</h3>
+        <div id="countryStats"></div>
+        <!-- Add the See More button -->
+        <button id="seeMoreBtn" onclick="showVisualizations()">See More Visualizations</button>
+    </div>
+
+    <!-- Controls Panel -->
+    <div class="control-panel">
+        <div class="dataset-indicator">
+            <span id="currentDataset">Epidemiology</span>
+        </div>
+
+        <div class="data-selector-container">
+            <label for="dataSelector">Data Type: </label>
+            <select id="dataSelector"></select>
+        </div>
+
+        <div class="date-controls">
+            <button id="prevDateBtn">&lt;</button>
+            <span id="currentDate">Loading...</span>
+            <button id="nextDateBtn">&gt;</button>
+        </div>
+
+        <input type="range" id="dateSlider" min="0" max="100" value="0">
+
+        <button id="resetBtn" class="control-btn">Reset View</button>
+        <button id="compareBtn" class="control-btn" onclick="CompareMode.enter()">Compare</button>
+    </div>
+
+    <!-- Loading indicator -->
+    <div id="loader"></div>
+    <div id="dataStatus">Loading data...</div>
+
+    <!-- Error display for data loading issues -->
+    <div id="errorDisplay" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.8); z-index: 1000; color: white; padding: 20px; flex-direction: column; align-items: center; justify-content: center;">
+        <h2>Data Loading Error</h2>
+        <div id="errorMessage"></div>
+        <button id="errorClose" style="margin-top: 20px; padding: 8px 16px;">Close</button>
+    </div>
+
+    <!-- Visualization Panel -->
+    <div id="visualizationPanel">
+        <div class="viz-header">
+            <div class="viz-title">
+                <img id="viz-flag" src="" alt="Country Flag">
+                <h2 id="viz-country-name">Country Data</h2>
+            </div>
+            <div class="viz-controls">
+                <select id="vizTypeSelector" class="viz-selector" onchange="changeVisualization()">
+                    <option value="bar">Bar Chart</option>
+                    <option value="line">Line Chart</option>
+                    <option value="pie">Pie Chart</option>
+                    <option value="radar">Radar Chart</option>
+                </select>
+            </div>
+        </div>
+        <div class="viz-content">
+            <div id="chartContainer" class="chart-container"></div>
+        </div>
+    </div>
+
+    <!-- Minimized Globe Container -->
+    <div id="minimizedGlobe" class="globe-minimized" style="display:none" onclick="restoreGlobe()"></div>
+
+    <!-- Compare Panel -->
+    <div id="comparePanel" class="compare-panel">
+        <div class="compare-header">
+            <div class="header-countries" id="headerCountriesList">
+                <!-- Country items will be added here -->
+            </div>
+            <button id="exitCompareBtn" class="exit-compare-btn" onclick="CompareMode.exit()">Exit Compare Mode</button>
+        </div>
+
+        <div class="compare-options">
+            <div class="controls-row">
+                <div class="display-mode-selector">
+                    <label>Display Mode:</label>
+                    <div class="display-mode-buttons">
+                        <button id="separateChartsBtn" class="display-mode-btn active" onclick="CompareMode.changeDisplayMode('separate')">Separate Charts</button>
+                        <button id="combinedChartBtn" class="display-mode-btn" onclick="CompareMode.changeDisplayMode('combined')">Combined Chart</button>
+                    </div>
+                </div>
+
+                <div class="chart-type-selector">
+                    <label>Chart Type:</label>
+                    <select id="compareChartType" onchange="CompareMode.changeChartType(this.value)">
+                        <option value="bar">Bar Chart</option>
+                        <option value="line">Line Chart</option>
+                        <option value="pie">Pie Chart</option>
+                        <option value="radar">Radar Chart</option>
+                    </select>
+                </div>
+
+                <div class="date-selection-panel">
+                    <label>Date Range:</label>
+                    <div class="date-range-slider-container">
+                        <div class="date-range-labels">
+                            <span id="startDateLabel">Start Date</span>
+                            <span id="endDateLabel">End Date</span>
+                        </div>
+                        <div id="dateRangeSlider"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Countries are now only shown in the header -->
+
+        <div id="compareChartContainer" class="compare-chart-container">
+            <!-- Charts will be rendered here -->
+        </div>
+    </div>
+</body>
+
+</html>
